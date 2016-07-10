@@ -17,6 +17,7 @@ int addPassword(const char *fpath, const struct stat *sb, int typeflag) {
     return 0;
 }
 
+int selectedItem = 1;
 int keypress(WINDOW *typeWin, WINDOW *outputWin, char ch, char *buf) {
     char *p = buf;
     for (; *p; ++p);
@@ -25,6 +26,12 @@ int keypress(WINDOW *typeWin, WINDOW *outputWin, char ch, char *buf) {
     case 3: // ^C
     case 4: // ^D
         return 0;
+    case 14: // ^N
+        ++selectedItem;
+        break;
+    case 16: // ^P
+        if (selectedItem > 1) --selectedItem;
+        break;
     case 21: // ^U
         werase(typeWin);
         box(typeWin, 0, 0);
@@ -54,9 +61,10 @@ int keypress(WINDOW *typeWin, WINDOW *outputWin, char ch, char *buf) {
         }
     }
 
-    int numPrinted = 0;
+drawoutput:
     werase(outputWin);
     box(outputWin, 0, 0);
+    int numPrinted = 0;
     for (int i = 0; i < nPasswords; ++i) {
         char *password = passwords[i];
         int pos = 0, npat = 0, len = strlen(password);
@@ -74,15 +82,25 @@ int keypress(WINDOW *typeWin, WINDOW *outputWin, char ch, char *buf) {
         if (numPrinted > LINES - 6) break;
         wmove(outputWin, ++numPrinted, 1);
         for (int i = 0; i < len; ++i) {
-            wattrset(outputWin, highlight[i] ?
-                    A_BOLD | COLOR_PAIR(highlight[i]) :
-                    A_NORMAL);
+            wattrset(outputWin,
+                    (numPrinted == selectedItem ?
+                        A_REVERSE :
+                        0) |
+                    (highlight[i] ?
+                        A_BOLD | COLOR_PAIR(highlight[i]) :
+                        A_NORMAL));
             waddch(outputWin, password[i]);
         }
 skipprint:
         free(highlight);
     }
     wattrset(outputWin, A_NORMAL);
+
+    if (numPrinted && numPrinted < selectedItem) {
+        selectedItem = numPrinted;
+        goto drawoutput;  // start all over...
+    }
+
     wrefresh(outputWin);
     wrefresh(typeWin);
 
@@ -112,8 +130,8 @@ int main(int argc, char* argv[]) {
     if (passEnvDir) passDir = passEnvDir;
     else {
         char *homeDir = getenv("HOME");
-        passDir = malloc((strlen(homeDir) + 18) * sizeof *passDir);
-        sprintf(passDir, "%s/.password-store/", homeDir);
+        passDir = malloc((strlen(homeDir) + 17) * sizeof *passDir);
+        sprintf(passDir, "%s/.password-store", homeDir);
     }
     chdir(passDir);
     if (ftw(".", addPassword, 15) == -1) {
