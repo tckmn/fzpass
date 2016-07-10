@@ -22,8 +22,24 @@ int keypress(WINDOW *typeWin, WINDOW *outputWin, char ch, char *buf) {
     for (; *p; ++p);
 
     switch (ch) {
+    case 3: // ^C
     case 4: // ^D
         return 0;
+    case 21: // ^U
+        werase(typeWin);
+        box(typeWin, 0, 0);
+        wmove(typeWin, 1, 1);
+        for (p = buf; *p; ++p) *p = '\0';
+        break;
+    case 23: // ^W
+        --p;
+        for (; *p != ' ' && p != buf; --p) {
+            *p = '\0';
+            waddstr(typeWin, "\b \b");
+        }
+        *p = '\0';
+        waddstr(typeWin, "\b \b");
+        break;
     case 127: // ^? (backspace)
     case '\b':
         if (*buf) {
@@ -32,8 +48,10 @@ int keypress(WINDOW *typeWin, WINDOW *outputWin, char ch, char *buf) {
         }
         break;
     default:
-        waddch(typeWin, ch);
-        *p = ch;
+        if (ch >= ' ' && ch <= '~') {
+            waddch(typeWin, ch);
+            *p = ch;
+        }
     }
 
     int numPrinted = 0;
