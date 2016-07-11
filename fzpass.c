@@ -18,6 +18,7 @@ int addPassword(const char *fpath, const struct stat *sb, int typeflag) {
 }
 
 int selectedItem = 1;
+char *selectedPassword = "";
 int keypress(WINDOW *typeWin, WINDOW *outputWin, char ch, char *buf) {
     char *p = buf;
     for (; *p; ++p);
@@ -25,6 +26,9 @@ int keypress(WINDOW *typeWin, WINDOW *outputWin, char ch, char *buf) {
     switch (ch) {
     case 3: // ^C
     case 4: // ^D
+        return 0;
+    case 10: // ^J (enter/return)
+        fprintf(stderr, "%s\n", selectedPassword);
         return 0;
     case 14: // ^N
         ++selectedItem;
@@ -90,6 +94,9 @@ drawoutput:
                         A_BOLD | COLOR_PAIR(highlight[i]) :
                         A_NORMAL));
             waddch(outputWin, password[i]);
+        }
+        if (numPrinted == selectedItem) {
+            selectedPassword = password;
         }
 skipprint:
         free(highlight);
